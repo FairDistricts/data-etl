@@ -1,13 +1,14 @@
 # DATA-ETL
 Utilities for importing and manaing data from different sources.
 
-## Run Example
+## Python Run Example
 
-First, install the package...
+1. First, install the package to get all of the dependencies...
 
 ``pip install data_etl``
 
-Then run the parse to ingest new data...
+2. Optionally, download the data from [OpenStates](https://openstates.org/downloads/)
+3. Then run the parse to ingest new data from the CSV data (in example below)
 
 ``./bin/run_local.sh parse -i data/2017-06-02-tx-csv``
 

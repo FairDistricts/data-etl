@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 # extract __version__ from version file. importing will lead to install failures
 setup_dir = os.path.dirname(__file__)
-with open(os.path.join(setup_dir, 'data_etl', '_version.py')) as file:
+with open(os.path.join(setup_dir, 'fair_data_etl', '_version.py')) as file:
     globals_dict = dict()
     exec(file.read(), globals_dict)
     __version__ = globals_dict['__version__']
@@ -26,8 +26,8 @@ setup(
     [console_scripts]
     """,
     #setup_requires=['pytest-runner'],
-    install_requires=['numpy', 'sqlalchemy',
-                      'pymysql',
+    install_requires=['numpy', 'sqlalchemy', 'Eve-SQLAlchemy',
+                      'pymysql', 'sqlite',
                       'sklearn'],
     tests_require=['pytest',
                    'pexpect'],

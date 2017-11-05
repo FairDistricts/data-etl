@@ -1,6 +1,7 @@
 library (tidyverse)
 library (data.table)
-
+library (DBI)
+library (pool)
 
 election <- fread("2016_General_Election_Returns.csv")
 
@@ -33,4 +34,23 @@ election <- election %>% mutate_if(is.numeric, funs(round(., 2))) %>% mutate(dpe
   mutate(wpercent=wpercent/totalvotes) %>% mutate_if(is.numeric, funs(round(., 2)))
 
 
-write.csv(election, "vtdsummary.csv")
+#write.csv(election, "vtdsummary.csv")
+
+pool <- dbPool(
+  drv = RMySQL::MySQL(),
+  dbname = "atxhackathon",
+  host="atxhackathon.chs2sgrlmnkn.us-east-1.rds.amazonaws.com",
+  username="atxhackathon", 
+  password="atxhackathon"
+)
+
+copy_to(pool, election, "vtd2016preselection",
+        temporary = FALSE, 
+        indexes = list(
+          "vtd", 
+          "winner", 
+          "winningvotes", 
+          "totalvotes"
+        )
+)
+

@@ -8,9 +8,6 @@ from sqlalchemy import Column, DateTime, String, Integer, ForeignKey, UniqueCons
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
-import pymysql
-pymysql.install_as_MySQLdb()
-
 Base = declarative_base()
 
 
@@ -47,7 +44,7 @@ class Bills(Base):
     session = Column(Integer)
     state = Column(String(64))
     civic_level = Column(String(128))
-    title = Column(String(256))
+    title = Column(String(512))
     subjects = Column(String(512))
     bill_type = Column(String(64))
     created_at = Column(DateTime)
@@ -125,7 +122,7 @@ class Words(Base):
     __tablename__ = 'word_tags'
     tag = Column(String(64), primary_key=True)
     tag_stem = Column(String(64))
-    word_id = Column(Integer)
+    word_id = Column(Integer, index=True)
 
 
 class DistrictWords(Base):
@@ -146,7 +143,7 @@ class DistrictWords(Base):
 
 def default_uri(database_type, include_dir=None):
     print("Returning database URI for type '{:}'...".format(database_type))
-    if database_type == 'msyql':   # use old database credentials
+    if database_type == 'mysql':   # use old database credentials
         return 'mysql+mysqldb://{:}:{:}@{:}:{:}/{:}'.format('atxhackathon', 'atxhackathon',
                         'atxhackathon.chs2sgrlmnkn.us-east-1.rds.amazonaws.com',
                         3306, 'atxhackathon')
@@ -154,6 +151,7 @@ def default_uri(database_type, include_dir=None):
         if include_dir is not None:
             return 'sqlite:///{:}/fairdata.db'.format(include_dir)
         return 'sqlite:///fairdata.db'
+    return None
 
 
 def create_session_uri(db_uri, purge_first=False):
@@ -161,7 +159,7 @@ def create_session_uri(db_uri, purge_first=False):
     engine = create_engine(db_uri, pool_recycle=3600)
     from sqlalchemy.orm import sessionmaker
     if purge_first:
-        print(" --- Warning, droping dtabase first --- ")
+        print(" --- Warning, dropping database first --- ")
         Base.metadata.drop_all(engine)   # all tables are deleted
     Session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)

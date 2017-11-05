@@ -23,13 +23,14 @@ def parse_csv(config, session):
     from os import listdir
     from os.path import isfile, join
 
-    reBill = re.compile(r"_bills.csv$")
-    reVotes = re.compile(r"_bill_legislator_votes.csv$")
-    reLegislator = re.compile(r"_legislators.csv$")
-    reSponsors = re.compile(r"_bill_sponsors.csv$")
-    reRoles = re.compile(r"_legislator_roles.csv$")
-    reActions = re.compile(r"_bill_votes.csv$")
+    procBill = [1, re.compile(r"_bills.csv$")]
+    procVotes = [2, re.compile(r"_bill_legislator_votes.csv$")]
+    procLegislator = [1, re.compile(r"_legislators.csv$")]
+    procSponsors = [3, re.compile(r"_bill_sponsors.csv$")]
+    procRoles = [2, re.compile(r"_legislator_roles.csv$")]
+    procActions = [3, re.compile(r"_bill_votes.csv$")]
     rePassage = re.compile(r"passage")
+    reCsv = re.compile(r"\.csv$")
 
     # helper function to map from dataframe of bills to database object
     def map_bill(df_row):
@@ -79,10 +80,21 @@ def parse_csv(config, session):
     listFiles = [config['input']]
     if not isfile(config['input']):
         listFiles = [join(config['input'], f) for f in listdir(config['input'])]
-    for path_full in listFiles:  # recurse
-        if isfile(path_full):  # if it's a file
-            targetFunc = None
 
+    # we must process files in a priority order because of table dependencies
+    idxRound = 1
+    i = len(listFiles)
+    while listFiles:
+        i -= 1
+        if i < 0 or i >= len(listFiles):
+            i = len(listFiles) - 1
+            idxRound += 1
+        path_full = listFiles[i]
+        if not isfile(path_full) or reCsv.search(path_full) is None:  # if it's a CSV file
+            del listFiles[i]
+            print("Unknown CSV format or non-file in '{:}', skipping".format(path_full))
+        else:
+            targetFunc = None
             time_start = time.time()
             df = pd.read_csv(path_full)
             clean_na = 'drop'
@@ -92,23 +104,23 @@ def parse_csv(config, session):
                 if col in df:
                     df[col] = pd.to_datetime(df[col])
 
-            if numFiles == 0:
-                print(df[:5])  # print some example of the data, but not all...
-            if reBill.search(path_full) is not None:  # parse bills
+            # if numFiles == 0:
+            #    print(df[:5])  # print some example of the data, but not all...
+            if procBill[1].search(path_full) is not None and procBill[0] == idxRound:  # parse bills
                 targetFunc = map_bill
-            elif reVotes.search(path_full) is not None:  # parse votes
+            elif procVotes[1].search(path_full) is not None and procVotes[0] == idxRound:  # parse votes
                 targetFunc = map_votes
                 df['leg_id'].replace('', np.nan, inplace=True)
                 df.drop_duplicates(['vote_id', 'leg_id'], inplace=True)
-            elif reLegislator.search(path_full) is not None:  # parse legislator
-                clean_na = 'blank';
+            elif procLegislator[1].search(path_full) is not None and procLegislator[0] == idxRound:  # parse legislator
+                clean_na = 'blank'
                 targetFunc = map_legislator
-            elif reSponsors.search(path_full) is not None:
+            elif procSponsors[1].search(path_full) is not None and procSponsors[0] == idxRound:
                 targetFunc = map_sponsor
                 df.drop_duplicates(['leg_id', 'bill_id', 'session', 'type'], inplace=True)
-            elif reActions.search(path_full) is not None:
+            elif procActions[1].search(path_full) is not None and procActions[0] == idxRound:
                 targetFunc = map_actions
-            elif reRoles.search(path_full) is not None:
+            elif procRoles[1].search(path_full) is not None and procRoles[0] == idxRound:
                 df_concat = None
                 clean_na = None
                 df.fillna("", inplace=True)  # fill bad values with empty string
@@ -124,27 +136,27 @@ def parse_csv(config, session):
                 targetFunc = map_role
                 df = df_concat
 
-            if clean_na == 'drop':
-                df.dropna(axis=0, how='any', inplace=True)  # drop any row that has a bad value
-                # df.fillna("(unknown {:})".format(int(random.random()*1000000)), inplace=True)
-            elif clean_na == 'blank':
-                df.fillna("", inplace=True)  # fill bad values with empty string
-
-
-            if targetFunc is None:
-                print("Unknown CSV format in '{:}', skipping".format(path_full))
+            if targetFunc is None:  # skip the file for now...
+                print("Delaying processing of '{:}' in round {:}".format(path_full, idxRound))
             else:
+                if clean_na == 'drop':
+                    df.dropna(axis=0, how='any', inplace=True)  # drop any row that has a bad value
+                    # df.fillna("(unknown {:})".format(int(random.random()*1000000)), inplace=True)
+                elif clean_na == 'blank':
+                    df.fillna("", inplace=True)  # fill bad values with empty string
+
                 # pass through each row in the dataframe
-                for i, r in df.iterrows():
+                for n, r in df.iterrows():
                     ormAdd = targetFunc(r)
                     session.add(ormAdd)
-                    if (i % 2000) == 0:  # occasionally commit to database
-                        sys.stdout.write("{:} ".format(i))
+                    if (n % 1000) == 0:  # occasionally commit to database
+                        sys.stdout.write("{:} ".format(n))
                         sys.stdout.flush()
                         session.commit()
                 session.commit()
                 print("... done with {:} records ({:}s)".format(len(df), time.time() - time_start))
                 numFiles += 1
+                del listFiles[i]
     print("All done parsing {:} files...".format(numFiles))
 
 

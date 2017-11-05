@@ -27,7 +27,7 @@ setup(
     """,
     #setup_requires=['pytest-runner'],
     install_requires=['numpy', 'sqlalchemy', 'Eve-SQLAlchemy',
-                      'mysqlclient', 'sqlite', 'eve_sqlalchemy',
+                      'mysqlclient', 'eve_sqlalchemy',
                       'sklearn', 'stemming'],
     tests_require=['pytest',
                    'pexpect'],

@@ -25,7 +25,7 @@ def parse_csv(config, session):
     reBill = re.compile(r"_bills.csv$")
     reVotes = re.compile(r"_bill_legislator_votes.csv$")
     reLegislator = re.compile(r"_legislators.csv$")
-    reSponsors = re.compile(r"_bill_sponspors.csv$")
+    reSponsors = re.compile(r"_bill_sponsors.csv$")
     reRoles = re.compile(r"_legislator_roles.csv$")
     reActions = re.compile(r"_bill_votes.csv$")
     rePassage = re.compile(r"passage")
@@ -43,7 +43,7 @@ def parse_csv(config, session):
         return domain.Legislator(legislator_id=df_row['leg_id'], first_name=df_row['first_name'],
                                  full_name=df_row['full_name'], last_name=df_row['last_name'],
                                  civic_level=DEFAULT_BILL_CIVIC, active=(0 if df_row['active'] == "FALSE" else 1),
-                                 subjects=df_row['subjects'], created_at=df_row['created_at'],
+                                 created_at=df_row['created_at'], updated_at=df_row['updated_at'],
                                  image=df_row['photo_url'], misc_data="")
 
     # helper function to map from dataframe of votes to database object
@@ -79,14 +79,13 @@ def parse_csv(config, session):
     if not isfile(config['input']):
         listFiles = [join(config['input'], f) for f in listdir(config['input'])]
     for path_full in listFiles:  # recurse
-        print("Attempting to load/parse '{:}'...".format(path_full))
         if isfile(path_full):  # if it's a file
             targetFunc = None
 
             time_start = time.time()
-
             df = pd.read_csv(path_full)
-            drop_na = True
+            clean_na = 'drop'
+            print("Attempting to load/parse '{:}' ({:} rows)...".format(path_full, len(df)))
 
             for col in ['created_at', 'updated_at', 'date']:
                 if col in df:
@@ -99,14 +98,16 @@ def parse_csv(config, session):
             elif reVotes.search(path_full) is not None:  # parse votes
                 targetFunc = map_votes
             elif reLegislator.search(path_full) is not None:  # parse legislator
+                clean_na = 'blank';
                 targetFunc = map_legislator
             elif reSponsors.search(path_full) is not None:
                 targetFunc = map_sponsor
+                df.drop_duplicates(['leg_id', 'bill_id', 'session', 'type'], inplace=True)
             elif reActions.search(path_full) is not None:
                 targetFunc = map_actions
             elif reRoles.search(path_full) is not None:
                 df_concat = None
-                drop_na = False
+                clean_na = None
                 df.fillna("", inplace=True)  # fill bad values with empty string
                 print("Flattening committees for legislator role ({:} rows)...".format(len(df)))
                 for gname, gset in df.groupby(['leg_id', 'term', 'state']):  # flatten comittees
@@ -120,23 +121,26 @@ def parse_csv(config, session):
                 targetFunc = map_role
                 df = df_concat
 
-            if drop_na:
+            if clean_na == 'drop':
                 df.dropna(axis=0, how='any', inplace=True)  # drop any row that has a bad value
                 # df.fillna("(unknown {:})".format(int(random.random()*1000000)), inplace=True)
+            elif clean_na == 'blank':
+                df.fillna("", inplace=True)  # fill bad values with empty string
+
 
             if targetFunc is None:
-                print("Unknown CSV parsing data... '{:}', skipping".format(path_full))
+                print("Unknown CSV format in '{:}', skipping".format(path_full))
             else:
                 # pass through each row in the dataframe
                 for i, r in df.iterrows():
                     ormAdd = targetFunc(r)
                     session.add(ormAdd)
-                    if (i % 1000) == 0:  # occasionally commit to database
+                    if (i % 2000) == 0:  # occasionally commit to database
                         sys.stdout.write("{:} ".format(i))
                         sys.stdout.flush()
                         session.commit()
                 session.commit()
-                print("... done {:}".format(time.time() - time_start))
+                print("... done with {:} records ({:}s)".format(len(df), time.time() - time_start))
                 numFiles += 1
     print("All done parsing {:} files...".format(numFiles))
 

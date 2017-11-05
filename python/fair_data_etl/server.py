@@ -7,12 +7,10 @@ from eve import Eve
 from eve_sqlalchemy import SQL
 from eve_sqlalchemy.config import DomainConfig, ResourceConfig
 from eve_sqlalchemy.validation import ValidatorSQL
-from sqlalchemy.ext.declarative import declarative_base
 
-from fair_data_etl.domain import default_uri, Legislator, Votes, Bills, BillSponsor, Roles, Actions
+from fair_data_etl.domain import default_uri, Legislator, Votes, Bills, BillSponsor, Roles, Actions, Base
 
-Base = declarative_base()
-
+import os
 
 def main(config_args={}):
     import argparse
@@ -21,18 +19,23 @@ def main(config_args={}):
 
     config_args.update(vars(parser.parse_args()))  # pargs, unparsed = parser.parse_known_args()
 
+    cwd = os.getcwd()
+    print("Using current working directory...'{:}'".format(cwd))
     SETTINGS = {
         'DEBUG': True,
-        'SQLALCHEMY_DATABASE_URI': default_uri(config_args['database_type']),
+        'DATE_FORMAT': '%Y-%m-%d %H:%M:%S',  # 2017-02-01 10:00:00
+        'PAGINATION_LIMIT': 250,
+        'SQLALCHEMY_DATABASE_URI': default_uri(config_args['database_type'], cwd),
         'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        'JSON_ARGUMENT': 'callback',
         'RESOURCE_METHODS': ['GET'],
         'DOMAIN': DomainConfig({
            'legislator': ResourceConfig(Legislator),
-           'votes': ResourceConfig(Votes),
-           'bills': ResourceConfig(Bills),
-           'sponsors': ResourceConfig(BillSponsor),
-           'roles': ResourceConfig(Roles),
-           'actions': ResourceConfig(Actions)
+           'vote': ResourceConfig(Votes),
+           'bill': ResourceConfig(Bills),
+           'sponsor': ResourceConfig(BillSponsor),
+           'role': ResourceConfig(Roles),
+           'action': ResourceConfig(Actions)
         }).render()
     }
 

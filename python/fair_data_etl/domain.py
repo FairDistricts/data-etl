@@ -4,8 +4,8 @@
 Main schema file and data imports...
 """
 
-from sqlalchemy import Column, DateTime, String, Integer, ForeignKey, func, PrimaryKeyConstraint, UniqueConstraint, Boolean
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy import Column, DateTime, String, Integer, ForeignKey, UniqueConstraint, Boolean
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 import pymysql
@@ -34,11 +34,8 @@ class Votes(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     vote_id = Column(String(32))
     vote = Column(String(16))
-    legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))  # TODO: fix with right relationship below
-    # legislator_id = relationship(
-    #    Legislator,
-    #    secondary='legislator_id'
-    # )
+    legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))
+    legislator = relationship("Legislator")
     __tableargs__ = (UniqueConstraint(vote_id, legislator_id), )
 
 
@@ -68,42 +65,46 @@ class Actions(Base):
     count_yes = Column(Integer)
     count_no = Column(Integer)
     count_other = Column(Integer)
+    vote = relationship("Votes")
+    bill = relationship("Bills")
 
 
 class BillSponsor(Base):
     __tablename__ = 'sponsors'
     id = Column(Integer, primary_key=True, autoincrement=True)
     legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))
-    bill_id = Column(String(128))  # TODO: fix with relationship below
-    # bill_id = relationship(
-    #    Bills,
-    #    secondary='bill_id'
-    # )
+    bill_id = Column(String(64), ForeignKey('bills.bill_id'))
     session = Column(Integer)
     state = Column(String(32))
     sponsor_type = Column(String(64))
-    __tableargs__ = (UniqueConstraint(legislator_id, bill_id, session), )
+    legislator = relationship("Legislator")
+    bill = relationship("Bills")
+    __tableargs__ = (UniqueConstraint(legislator_id, bill_id, session, sponsor_type), )
 
 
 class Roles(Base):
     __tablename__ = 'roles'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))  # TODO: match with other legislator
+    legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))
     session = Column(Integer)
     state = Column(String(32))
     district = Column(String(32))
     party = Column(String(32))
     committee_ids = Column(String(256))
     committee = Column(String(512))
+    legislator = relationship("Legislator")
     __tableargs__ = (UniqueConstraint(legislator_id, session), )
 
 
-def default_uri(database_type):
+def default_uri(database_type, include_dir=None):
+    print("Returning database URI for type '{:}'...".format(database_type))
     if database_type == 'msyql':   # use old database credentials
         return 'mysql+mysqldb://{:}:{:}@{:}:{:}/{:}'.format('atxhackathon', 'atxhackathon',
                         'atxhackathon.chs2sgrlmnkn.us-east-1.rds.amazonaws.com',
                         3306, 'atxhackathon')
     elif database_type == 'sqlite':
+        if include_dir is not None:
+            return 'sqlite:///{:}/fairdata.db'.format(include_dir)
         return 'sqlite:///fairdata.db'
 
 

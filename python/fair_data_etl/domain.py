@@ -98,17 +98,11 @@ class Roles(Base):
     __tableargs__ = (UniqueConstraint(legislator_id, session), )
 
 
-class Words(Base):
-    __tablename__ = 'subject_words'
-    word_id = Column(Integer, primary_key=True)
-    tag = Column(String(64))
-    tag_stem = Column(String(64))
-
-
 class Subjects(Base):
     __tablename__ = 'subject_tags'
     subject_id = Column(Integer, primary_key=True)
     tag = Column(String(64))
+    __tableargs__ = (UniqueConstraint(tag), )
 
 
 class DistrictSubjects(Base):
@@ -127,10 +121,17 @@ class DistrictSubjects(Base):
     __tableargs__ = (UniqueConstraint(subject_id, district, session, state), )
 
 
+class Words(Base):
+    __tablename__ = 'word_tags'
+    tag = Column(String(64), primary_key=True)
+    tag_stem = Column(String(64))
+    word_id = Column(Integer)
+
+
 class DistrictWords(Base):
     __tablename__ = 'district_words'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    word_id = Column(Integer, ForeignKey('subject_words.word_id'))
+    word_id = Column(Integer, ForeignKey('word_tags.word_id'))
     district = Column(Integer)
     session = Column(Integer)
     state = Column(String(32))

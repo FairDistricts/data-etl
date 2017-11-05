@@ -53,7 +53,9 @@ database or the initial group's msyql database.
 Summaries have been generated at tuples of session, district, and subject (textual).
 This table coupling (`district_subjects` and `subject_tags`) allow callers to
 (a) discover the relevant subjects as deteremined by legislature, (b) determine
-the voting history for each district according to these tags. *(added 0.3.0)*
+the voting history for each district according to these tags *(added 0.3.0)*,
+(c) keywords can also be used directly in the same fashion (with tables `district_words`
+and `word_tags` respectively) *(added 0.3.1)*.
 
 ## Running summarization
 Similar to the parse operation, summarization can be run in two flavors, local or
@@ -74,7 +76,8 @@ utilized for each application.*
 1. List the subjects that are found from legislature actions (see `subject_tags`).
    This could be connected to an auto-complete or drop-down in a GUI that allows
    the user to select a number of other properties.  *Note: In the current version
-   there **is** case sensitivity for the tags.*
+   there **is** case sensitivity for the subjects; words should **always** be
+   converted to lower-case.*
 
 ```
 curl -g 'http://127.0.0.1:5000/subject_tag'  (list all available tags)
@@ -82,15 +85,27 @@ curl -g 'http://127.0.0.1:5000/subject_tag/4'  (grab a single specific tag, here
 curl -g 'http://127.0.0.1:5000/subject_tag?where={"tag":"Commerce"}'  (grab a single tag)
 ```
 
-2. Search by subject to find the voting history for a district.  For a particular
+2. In a keyword suggest fasion, see which word maps to which word stem.  Similar to
+
+
+```
+curl -g 'http://127.0.0.1:5000/word_tag/running'  (check out the 'word_id' from this result)
+curl -g 'http://127.0.0.1:5000/word_tag/run'  (same 'word_id', neat huh?)
+curl -g 'http://127.0.0.1:5000/word_tag?where={%22tag%22:[%22running%22,%20%22run%22,%20%22fly%22]}  (query multiple words to get their word_ids)
+```
+
+
+3. Search by subject to find the voting history for a district.  For a particular
    subject (or number of subjects), attempt to find effects on districts.
 
 ```
 curl -g 'http://127.0.0.1:5000/subject?where={%22subject_tag%22:[4,22]}'  (search with to tags for district impact)
 curl -g 'http://127.0.0.1:5000/subject?where={%22district%22:[2]}'  (find direct impact over all years/tags for a district)
+curl -g 'http://127.0.0.1:5000/word?where={%22district%22:[2]}'  (find direct impact over all years/tags for a district)
+curl -g 'http://127.0.0.1:5000/word?where={%22district%22:[2]}&sort=-count_no' (what are the most no-vote words for a district?)
 ```
 
-3. Analyze the voting trends on a single district over sessions.
+4. Analyze the voting trends on a single district over sessions.
 
 ```
 curl -g 'http://127.0.0.1:5000/subject?where={"district":[2], "subject_tag":[4]}'
@@ -102,6 +117,14 @@ curl -g 'http://127.0.0.1:5000/legislator?where={%22legislator_id%22:[%22TXL0001
     (confirm overlap of the senator/reps and their total time serving)
 ```
 
+5. Create a word cloud for words in a district, comparing positive and negative
+   (by historical vote correlation).
+
+```
+curl -g 'http://127.0.0.1:5000/word?where={%22district%22:[2]}&sort=-count_no&max_results=5' (5 most negative vote getters)
+curl -g 'http://127.0.0.1:5000/word?where={%22district%22:[2]}&sort=-count_yes&max_results=5' (5 most positive vote getters)
+curl -g 'http://127.0.0.1:5000/word?where={%22district%22:[2]}&sort=-count_other&max_results=5' (5 most ambivalent vote getters)
+```
 # server
 Assuming you have a legit source of data (see above), you can start a simple rest
 server to provide data (and answer simple queries) via simple eve server.

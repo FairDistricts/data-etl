@@ -1,10 +1,10 @@
 #! python
 # -*- coding: utf-8 -*-
 """
-Command line code for simple server
+Command line code for data summarize
 """
 
-from fair_data_etl.server import main
+from fair_data_etl.summarize import main
 
 if __name__ == "__main__":
     main()

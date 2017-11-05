@@ -8,9 +8,10 @@ from eve_sqlalchemy import SQL
 from eve_sqlalchemy.config import DomainConfig, ResourceConfig
 from eve_sqlalchemy.validation import ValidatorSQL
 
-from fair_data_etl.domain import default_uri, Legislator, Votes, Bills, BillSponsor, Roles, Actions, Base
+from fair_data_etl.domain import default_uri, Legislator, Votes, Bills, BillSponsor, Roles, Actions, Base, DistrictSubjects, DistrictWords, Subjects, Words
 
 import os
+
 
 def main(config_args={}):
     import argparse
@@ -35,7 +36,11 @@ def main(config_args={}):
            'bill': ResourceConfig(Bills),
            'sponsor': ResourceConfig(BillSponsor),
            'role': ResourceConfig(Roles),
-           'action': ResourceConfig(Actions)
+           'action': ResourceConfig(Actions),
+           'subject': ResourceConfig(DistrictSubjects),
+           'word': ResourceConfig(DistrictWords),
+           'subject_tag': ResourceConfig(Subjects),
+           'word_tag': ResourceConfig(Words)
         }).render()
     }
 

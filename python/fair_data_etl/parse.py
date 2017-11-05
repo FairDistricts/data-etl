@@ -12,6 +12,7 @@ import random
 
 from fair_data_etl import domain
 import pandas as pd
+import numpy as np
 
 DEFAULT_BILL_STATE = 'tx'
 DEFAULT_BILL_CIVIC = 'unknown'
@@ -97,6 +98,8 @@ def parse_csv(config, session):
                 targetFunc = map_bill
             elif reVotes.search(path_full) is not None:  # parse votes
                 targetFunc = map_votes
+                df['leg_id'].replace('', np.nan, inplace=True)
+                df.drop_duplicates(['vote_id', 'leg_id'], inplace=True)
             elif reLegislator.search(path_full) is not None:  # parse legislator
                 clean_na = 'blank';
                 targetFunc = map_legislator

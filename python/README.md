@@ -15,8 +15,8 @@ Generally the execution pattern will be something like this without installing:
 ``run_fair_data_<run_mode> <arguments>``
 
 * **parse** - allows you to parse new data
+* **summarize** - allows caller to analyze votes by subject/district/session
 * **server** - allows you to serve REST-based data queries from the database backend via [Eve](http://python-eve.org/index.html)
-
 
 # parse
 You can parse and ingest new data (as of `0.2.0` just from *OpenStates*) from
@@ -48,6 +48,59 @@ it to the base directory of the python repo.
 As of version `0.2.0`, a conditional `database_type` flag was added to use either a local sqlite
 database or the initial group's msyql database.
 
+
+# summarize
+Summaries have been generated at tuples of session, district, and subject (textual).
+This table coupling (`district_subjects` and `subject_tags`) allow callers to
+(a) discover the relevant subjects as deteremined by legislature, (b) determine
+the voting history for each district according to these tags. *(added 0.3.0)*
+
+## Running summarization
+Similar to the parse operation, summarization can be run in two flavors, local or
+installed.  The one difference, in comparison is that summaries are computed
+over existing data alone and not directly on imported data.  This means that your
+database should be fully populated before utilizing the summarize feature.
+
+```
+./bin/run_local.sh summarize   (single command, no advanced options now)
+```
+
+## Applications of summarization
+There are a few use cases that fall-out of the produced tables from summarization.
+*Note: It's a bit of of order in this discussion (see [server](server) discussion below
+for more information), but included below are web-based calls that could be
+utilized for each application.*
+
+1. List the subjects that are found from legislature actions (see `subject_tags`).
+   This could be connected to an auto-complete or drop-down in a GUI that allows
+   the user to select a number of other properties.  *Note: In the current version
+   there **is** case sensitivity for the tags.*
+
+```
+curl -g 'http://127.0.0.1:5000/subject_tag'  (list all available tags)
+curl -g 'http://127.0.0.1:5000/subject_tag/4'  (grab a single specific tag, here 'Housing and Property')
+curl -g 'http://127.0.0.1:5000/subject_tag?where={"tag":"Commerce"}'  (grab a single tag)
+```
+
+2. Search by subject to find the voting history for a district.  For a particular
+   subject (or number of subjects), attempt to find effects on districts.
+
+```
+curl -g 'http://127.0.0.1:5000/subject?where={%22subject_tag%22:[4,22]}'  (search with to tags for district impact)
+curl -g 'http://127.0.0.1:5000/subject?where={%22district%22:[2]}'  (find direct impact over all years/tags for a district)
+```
+
+3. Analyze the voting trends on a single district over sessions.
+
+```
+curl -g 'http://127.0.0.1:5000/subject?where={"district":[2], "subject_tag":[4]}'
+    (district 2, subject 4; observe votes were only in session 81, 85)
+curl -g 'http://127.0.0.1:5000/subject_tag/4'  (grab a single specific tag, here 'Housing and Property')
+curl -g 'http://127.0.0.1:5000/role?where={%22district%22:[2],%20%22session%22:[81,85]}&projection={%22legislator%22:1,%22party%22:1}'
+    (find the reps who voted in these district/sessions)
+curl -g 'http://127.0.0.1:5000/legislator?where={%22legislator_id%22:[%22TXL000185%22,%20%22TXL000260%22,%20%22TXL000503%22]}'
+    (confirm overlap of the senator/reps and their total time serving)
+```
 
 # server
 Assuming you have a legit source of data (see above), you can start a simple rest
@@ -91,3 +144,4 @@ curl -g 'http://127.0.0.1:5000/bill?where=created_at%20%3E%20%272017-02-31%2010:
 Below are two examples of the returned JSON.
 1. Returning bills in a time range from the time-bound query above ![bills query](data/images/bill_example.jpg)
 2. Querying for recent Democrats from the time-bound query above ![role query](data/images/role_recent_democrat.jpg)
+

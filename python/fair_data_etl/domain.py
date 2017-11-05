@@ -36,13 +36,14 @@ class Votes(Base):
     vote = Column(String(16))
     legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))
     legislator = relationship("Legislator")
+    action = relationship("Actions")
     __tableargs__ = (UniqueConstraint(vote_id, legislator_id), )
 
 
 class Bills(Base):
     __tablename__ = 'bills'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    bill_id = Column(String(64))
+    bill_id = Column(String(32))
     session = Column(Integer)
     state = Column(String(64))
     civic_level = Column(String(128))
@@ -51,6 +52,7 @@ class Bills(Base):
     bill_type = Column(String(64))
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+    actions = relationship("Actions")
     __tableargs__ = (UniqueConstraint(bill_id, session, state), )
 
 
@@ -58,8 +60,8 @@ class Actions(Base):
     __tablename__ = 'actions'
     id = Column(Integer, primary_key=True, autoincrement=True)
     passage = Column(Boolean)  # passage or other?
-    vote_id = Column(String(64), ForeignKey('votes.vote_id'))
-    bill_id = Column(String(64), ForeignKey('bills.bill_id'))
+    vote_id = Column(String(32), ForeignKey('votes.vote_id'))
+    bill_id = Column(String(32), ForeignKey('bills.bill_id'))
     __tableargs__ = (UniqueConstraint(vote_id, bill_id), )
     created_at = Column(DateTime)
     count_yes = Column(Integer)
@@ -73,7 +75,7 @@ class BillSponsor(Base):
     __tablename__ = 'sponsors'
     id = Column(Integer, primary_key=True, autoincrement=True)
     legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))
-    bill_id = Column(String(64), ForeignKey('bills.bill_id'))
+    bill_id = Column(String(32), ForeignKey('bills.bill_id'))
     session = Column(Integer)
     state = Column(String(32))
     sponsor_type = Column(String(64))
@@ -88,12 +90,57 @@ class Roles(Base):
     legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))
     session = Column(Integer)
     state = Column(String(32))
-    district = Column(String(32))
+    district = Column(Integer)
     party = Column(String(32))
     committee_ids = Column(String(256))
     committee = Column(String(512))
     legislator = relationship("Legislator")
     __tableargs__ = (UniqueConstraint(legislator_id, session), )
+
+
+class Words(Base):
+    __tablename__ = 'subject_words'
+    word_id = Column(Integer, primary_key=True)
+    tag = Column(String(64))
+    tag_stem = Column(String(64))
+
+
+class Subjects(Base):
+    __tablename__ = 'subject_tags'
+    subject_id = Column(Integer, primary_key=True)
+    tag = Column(String(64))
+
+
+class DistrictSubjects(Base):
+    __tablename__ = 'district_subjects'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    subject_id = Column(Integer, ForeignKey('subject_tags.subject_id'))
+    district = Column(Integer)
+    session = Column(Integer)
+    state = Column(String(32))
+    count_yes = Column(Integer)
+    count_no = Column(Integer)
+    count_other = Column(Integer)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+    subject_tag = relationship("Subjects")
+    __tableargs__ = (UniqueConstraint(subject_id, district, session, state), )
+
+
+class DistrictWords(Base):
+    __tablename__ = 'district_words'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    word_id = Column(Integer, ForeignKey('subject_words.word_id'))
+    district = Column(Integer)
+    session = Column(Integer)
+    state = Column(String(32))
+    count_yes = Column(Integer)
+    count_no = Column(Integer)
+    count_other = Column(Integer)
+    created_at = Column(DateTime)
+    updated_at = Column(DateTime)
+    word_tag = relationship("Words")
+    __tableargs__ = (UniqueConstraint(word_id, district, session, state), )
 
 
 def default_uri(database_type, include_dir=None):
@@ -118,4 +165,5 @@ def create_session_uri(db_uri, purge_first=False):
     Session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
     session = Session()
+    session.engine = engine
     return session

@@ -4,7 +4,7 @@
 Main schema file and data imports...
 """
 
-from sqlalchemy import Column, DateTime, String, Integer, ForeignKey, func, PrimaryKeyConstraint
+from sqlalchemy import Column, DateTime, String, Integer, ForeignKey, func, PrimaryKeyConstraint, UniqueConstraint, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -31,58 +31,79 @@ class Legislator(Base):
 
 class Votes(Base):
     __tablename__ = 'votes'
-    vote_id = Column(String(64), primary_key=True)
-    vote = Column(String(32))
-    legislator_id = Column(String(64), primary_key=True)  # TODO: fix with right relationship below
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    vote_id = Column(String(32))
+    vote = Column(String(16))
+    legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))  # TODO: fix with right relationship below
     # legislator_id = relationship(
     #    Legislator,
     #    secondary='legislator_id'
     # )
+    __tableargs__ = (UniqueConstraint(vote_id, legislator_id), )
 
 
 class Bills(Base):
     __tablename__ = 'bills'
-    bill_id = Column(String(128), primary_key=True)
-    session = Column(Integer, primary_key=True)
-    state = Column(String(64), primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    bill_id = Column(String(64))
+    session = Column(Integer)
+    state = Column(String(64))
     civic_level = Column(String(128))
     title = Column(String(256))
     subjects = Column(String(512))
     bill_type = Column(String(64))
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+    __tableargs__ = (UniqueConstraint(bill_id, session, state), )
+
+
+class Actions(Base):
+    __tablename__ = 'actions'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    passage = Column(Boolean)  # passage or other?
+    vote_id = Column(String(64), ForeignKey('votes.vote_id'))
+    bill_id = Column(String(64), ForeignKey('bills.bill_id'))
+    __tableargs__ = (UniqueConstraint(vote_id, bill_id), )
+    created_at = Column(DateTime)
+    count_yes = Column(Integer)
+    count_no = Column(Integer)
+    count_other = Column(Integer)
 
 
 class BillSponsor(Base):
     __tablename__ = 'sponsors'
-    legislator_id = Column(String(64),  primary_key=True)
-    bill_id = Column(String(128), primary_key=True)  # TODO: fix with relationship below
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))
+    bill_id = Column(String(128))  # TODO: fix with relationship below
     # bill_id = relationship(
     #    Bills,
     #    secondary='bill_id'
     # )
-    session = Column(Integer, primary_key=True)
+    session = Column(Integer)
     state = Column(String(32))
     sponsor_type = Column(String(64))
+    __tableargs__ = (UniqueConstraint(legislator_id, bill_id, session), )
 
 
 class Roles(Base):
     __tablename__ = 'roles'
-    legislator_id = Column(String(64),  primary_key=True)  # TODO: match with other legislator
-    session = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    legislator_id = Column(String(64), ForeignKey('legislator.legislator_id'))  # TODO: match with other legislator
+    session = Column(Integer)
     state = Column(String(32))
     district = Column(String(32))
     party = Column(String(32))
     committee_ids = Column(String(256))
     committee = Column(String(512))
+    __tableargs__ = (UniqueConstraint(legislator_id, session), )
 
 
-def default_uri():
-    if False:   #  use old database credentials
+def default_uri(database_type):
+    if database_type == 'msyql':   # use old database credentials
         return 'mysql+mysqldb://{:}:{:}@{:}:{:}/{:}'.format('atxhackathon', 'atxhackathon',
-                            'atxhackathon.chs2sgrlmnkn.us-east-1.rds.amazonaws.com',
-                            3306, 'atxhackathon')
-    else:
+                        'atxhackathon.chs2sgrlmnkn.us-east-1.rds.amazonaws.com',
+                        3306, 'atxhackathon')
+    elif database_type == 'sqlite':
         return 'sqlite:///fairdata.db'
 
 

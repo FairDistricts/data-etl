@@ -20,14 +20,14 @@ setup(
     long_description = ("Data ETL for voting records for history and object discovery"),
     license = "Apache",
     #package_data={globals_dict['MODEL_NAME']:['data/*']},
-    #scripts=['bin/run_image-mood-classifier_reference.py'],
+    scripts=['bin/run_fair_data_server.py', 'bin/run_fair_data_parse.py'],
     setup_requires=['pytest-runner'],
     entry_points="""
     [console_scripts]
     """,
     #setup_requires=['pytest-runner'],
     install_requires=['numpy', 'sqlalchemy', 'Eve-SQLAlchemy',
-                      'pymysql', 'sqlite',
+                      'pymysql', 'sqlite', 'eve_sqlalchemy',
                       'sklearn'],
     tests_require=['pytest',
                    'pexpect'],

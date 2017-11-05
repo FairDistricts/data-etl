@@ -68,9 +68,11 @@ server to provide data (and answer simple queries) via simple eve server.
 
 4. Want to slice the data ina different way? Check out the [cool set of examples](http://python-eve.org/features.html
    available in the full fledged python sample, or try a query like the one below,
-   which will select all votes that took place between two date ranges.
+   which will bills found between two date ranges.
 
-`` TBD ``
+```
+curl -g 'http://127.0.0.1:5000/bill?where=created_at%20%3E%20%272017-02-31%2010:22:50%27%20and%20created_at%3C%272017-03-07%2010:22:50%27&max_results=100' (bills created between March 1,2017 and March 7,2017)
+```
 
    Or one that will all look at roles a few ways... Note that if you're not using a
    MongoDB database backend, some functions may not behave exactly as expected according
@@ -83,5 +85,9 @@ curl -g 'http://127.0.0.1:5000/role?where={%22district%22:20.0}&max_results=100&
 curl -g 'http://127.0.0.1:5000/action?where=count_other%3E=50' (count of 'other' votes was > 50)
 curl -g 'http://127.0.0.1:5000/action?where=count_yes%3E=100%20and%20count_yes%3C120' (count of 'yes' was between 100 and 120)
 curl -g 'http://127.0.0.1:5000/bill?where=created_at%20%3E%20%272017-02-31%2010:22:50%27%20and%20created_at%3C%272017-03-07%2010:22:50%27&max_results=100' (bills created between March 1,2017 and March 7,2017)
+```
 
-
+## Screenshots
+Below are two examples of the returned JSON.
+1. Returning bills in a time range from the time-bound query above ![bills query](data/images/bill_example.jpg)
+2. Querying for recent Democrats from the time-bound query above ![role query](data/images/role_recent_democrat.jpg)

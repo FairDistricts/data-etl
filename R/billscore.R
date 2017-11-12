@@ -7,8 +7,8 @@ pool <- dbPool(
   drv = RMySQL::MySQL(),
   dbname = "atxhackathon",
   host="atxhackathon.chs2sgrlmnkn.us-east-1.rds.amazonaws.com",
-  username="atxhackathon", 
-  password="atxhackathon"
+  username="", 
+  password=""
 )
 
 df <- pool %>% tbl("bill_votes_leg") %>% collect()
